@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My n8n Chatbot</title>
+    <title>Vinyltec AI Assistant</title>
     <style>
-        /* CSS: ตกแต่งหน้าต่างแชทให้สวยงาม */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .chat-container { width: 400px; height: 600px; background-color: #fff; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .chat-container { width: 450px; height: 700px; background-color: #fff; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { background-color: #4A90E2; color: white; padding: 15px; text-align: center; font-weight: bold; }
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { padding: 10px 15px; border-radius: 20px; max-width: 80%; word-wrap: break-word; font-size: 14px; white-space: pre-wrap; } /* เพิ่ม pre-wrap เพื่อให้แสดงการเว้นบรรทัดจาก AI */
+        .message { padding: 10px 15px; border-radius: 20px; max-width: 85%; word-wrap: break-word; font-size: 14px; white-space: pre-wrap; line-height: 1.5; }
         .user-message { background-color: #0078FF; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .bot-message { background-color: #E4E6EB; color: black; align-self: flex-start; border-bottom-left-radius: 2px; }
         .loading { font-style: italic; color: #888; font-size: 12px; margin: 15px; display: none; }
@@ -25,17 +24,16 @@
 <div class="chat-container">
     <div class="chat-header">🤖 AI Assistant</div>
     <div class="chat-messages" id="chatMessages">
-        <div class="message bot-message">สวัสดีครับ มีอะไรให้ช่วยไหมครับ?</div>
+        <div class="message bot-message">สวัสดีครับ มีข้อมูลเกรดพลาสติกอะไรให้ช่วยหาไหมครับ?</div>
     </div>
-    <div class="loading" id="loadingStatus">กำลังพิมพ์...</div>
+    <div class="loading" id="loadingStatus">กำลังรอคำตอบจาก AI...</div>
     <div class="input-area">
-        <input type="text" id="userInput" placeholder="พิมพ์ข้อความ..." onkeypress="handleEnter(event)">
+        <input type="text" id="userInput" placeholder="พิมพ์ข้อความที่นี่..." onkeypress="handleEnter(event)">
         <button onclick="sendMessage()">ส่ง</button>
     </div>
 </div>
 
 <script>
-    // URL Webhook ของคุณ
     const webhookUrl = "https://rev3.vinyltec.org/webhook-test/61c2d0fd-bedc-4bac-a825-920888f65f24"; 
 
     function handleEnter(event) {
@@ -47,40 +45,36 @@
         const messageText = inputField.value.trim();
         if (messageText === "") return;
 
-        // 1. แสดงข้อความผู้ใช้
         addMessage(messageText, "user-message");
         inputField.value = "";
         
-        // 2. แสดงสถานะกำลังโหลด
         const loading = document.getElementById("loadingStatus");
         loading.style.display = "block";
 
         try {
-            // 3. ส่งข้อมูลไป n8n Webhook
             const response = await fetch(webhookUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ chatInput: messageText })
             });
 
-            if (!response.ok) {
-                throw new Error("Network response was not ok");
-            }
+            if (!response.ok) throw new Error("HTTP Error: " + response.status);
 
-            const data = await response.json();
-            console.log("Data from n8n:", data); // ดูข้อมูลใน Console (F12)
-            
-            // 4. จัดการข้อมูล (ดึงจาก Array ถ้าจำเป็น)
-            let finalData = Array.isArray(data) ? data[0] : data;
+            const resData = await response.json();
+            console.log("n8n Response:", resData);
 
-            // 5. ดึงคำตอบจาก Key ชื่อ output ตามที่ AI Agent ส่งมา
-            const botReply = finalData.output || "ขออภัย ระบบขัดข้องหรือไม่มีข้อมูลส่งกลับ";
+            // แก้ไขปัญหาเครื่องหมาย [] ครอบข้อมูล
+            // ดึงข้อมูลตัวแรกถ้ามาเป็น Array หรือใช้ข้อมูลตรงๆ ถ้ามาเป็น Object
+            let cleanData = Array.isArray(resData) ? resData[0] : resData;
+
+            // ดึงข้อความจาก key ชื่อ 'output'
+            const botReply = cleanData.output || "ขออภัย ไม่ได้รับข้อความตอบกลับจากระบบ";
 
             addMessage(botReply, "bot-message");
 
         } catch (error) {
-            console.error("Error:", error);
-            addMessage("ไม่สามารถเชื่อมต่อกับ Server ได้ (ตรวจสอบ CORS หรือ Internet)", "bot-message");
+            console.error("Fetch Error:", error);
+            addMessage("ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบ Console (F12)", "bot-message");
         } finally {
             loading.style.display = "none";
         }
@@ -95,6 +89,5 @@
         messagesDiv.scrollTop = messagesDiv.scrollHeight; 
     }
 </script>
-
 </body>
 </html>
