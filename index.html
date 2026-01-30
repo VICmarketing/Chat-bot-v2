@@ -10,10 +10,10 @@
         .chat-container { width: 400px; height: 600px; background-color: #fff; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { background-color: #4A90E2; color: white; padding: 15px; text-align: center; font-weight: bold; }
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { padding: 10px 15px; border-radius: 20px; max-width: 80%; word-wrap: break-word; font-size: 14px; }
+        .message { padding: 10px 15px; border-radius: 20px; max-width: 80%; word-wrap: break-word; font-size: 14px; white-space: pre-wrap; } /* เพิ่ม pre-wrap เพื่อให้แสดงการเว้นบรรทัดจาก AI */
         .user-message { background-color: #0078FF; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .bot-message { background-color: #E4E6EB; color: black; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .loading { font-style: italic; color: #888; font-size: 12px; margin-left: 10px; display: none; }
+        .loading { font-style: italic; color: #888; font-size: 12px; margin: 15px; display: none; }
         .input-area { padding: 15px; border-top: 1px solid #ddd; display: flex; gap: 10px; background: #fff; }
         input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
         button { background-color: #4A90E2; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; transition: 0.3s; }
@@ -25,7 +25,6 @@
 <div class="chat-container">
     <div class="chat-header">🤖 AI Assistant</div>
     <div class="chat-messages" id="chatMessages">
-        <!-- ข้อความจะปรากฏที่นี่ -->
         <div class="message bot-message">สวัสดีครับ มีอะไรให้ช่วยไหมครับ?</div>
     </div>
     <div class="loading" id="loadingStatus">กำลังพิมพ์...</div>
@@ -36,7 +35,7 @@
 </div>
 
 <script>
-    // URL ของ n8n Webhook ที่คุณต้องเอามาใส่เอง *สำคัญ*
+    // URL Webhook ของคุณ
     const webhookUrl = "https://rev3.vinyltec.org/webhook-test/61c2d0fd-bedc-4bac-a825-920888f65f24"; 
 
     function handleEnter(event) {
@@ -64,22 +63,24 @@
                 body: JSON.stringify({ chatInput: messageText })
             });
 
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+
             const data = await response.json();
+            console.log("Data from n8n:", data); // ดูข้อมูลใน Console (F12)
             
-            // 4. รับคำตอบ (สมมติว่า n8n ส่งกลับมาเป็น { "output": "คำตอบ..." })
-            const data = await response.json();
+            // 4. จัดการข้อมูล (ดึงจาก Array ถ้าจำเป็น)
+            let finalData = Array.isArray(data) ? data[0] : data;
 
-// ตรวจสอบว่าข้อมูลที่ส่งมาเป็น Array [ ] หรือไม่ ถ้าใช่ให้ดึงตัวแรกมาใช้งาน
-let finalData = Array.isArray(data) ? data[0] : data;
+            // 5. ดึงคำตอบจาก Key ชื่อ output ตามที่ AI Agent ส่งมา
+            const botReply = finalData.output || "ขออภัย ระบบขัดข้องหรือไม่มีข้อมูลส่งกลับ";
 
-// ดึงข้อความจาก Key ชื่อ output
-const botReply = finalData.output || "ขออภัย ระบบขัดข้อง";
-
-addMessage(botReply, "bot-message");
+            addMessage(botReply, "bot-message");
 
         } catch (error) {
             console.error("Error:", error);
-            addMessage("ไม่สามารถเชื่อมต่อกับ Server ได้", "bot-message");
+            addMessage("ไม่สามารถเชื่อมต่อกับ Server ได้ (ตรวจสอบ CORS หรือ Internet)", "bot-message");
         } finally {
             loading.style.display = "none";
         }
@@ -91,11 +92,9 @@ addMessage(botReply, "bot-message");
         messageElement.classList.add("message", className);
         messageElement.textContent = text;
         messagesDiv.appendChild(messageElement);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight; // เลื่อนลงล่างสุดเสมอ
+        messagesDiv.scrollTop = messagesDiv.scrollHeight; 
     }
 </script>
 
 </body>
-
 </html>
-
