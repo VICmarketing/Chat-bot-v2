@@ -67,8 +67,15 @@
             const data = await response.json();
             
             // 4. รับคำตอบ (สมมติว่า n8n ส่งกลับมาเป็น { "output": "คำตอบ..." })
-            const botReply = data.output || "ขออภัย ระบบขัดข้อง"; 
-            addMessage(botReply, "bot-message");
+            const data = await response.json();
+
+// ตรวจสอบว่าข้อมูลที่ส่งมาเป็น Array [ ] หรือไม่ ถ้าใช่ให้ดึงตัวแรกมาใช้งาน
+let finalData = Array.isArray(data) ? data[0] : data;
+
+// ดึงข้อความจาก Key ชื่อ output
+const botReply = finalData.output || "ขออภัย ระบบขัดข้อง";
+
+addMessage(botReply, "bot-message");
 
         } catch (error) {
             console.error("Error:", error);
@@ -91,3 +98,4 @@
 </body>
 
 </html>
+
